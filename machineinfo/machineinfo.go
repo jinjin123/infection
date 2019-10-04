@@ -7,6 +7,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	Server "infection/server"
 	User "infection/user"
+	"io/ioutil"
 	"log"
 	"net"
 	"strconv"
@@ -64,12 +65,14 @@ type VersionDetail struct {
 	Hostid   string `json:"hostid"`
 }
 
-func MachineSend(addr string) {
+func MachineSend(addr string, finflag chan string) {
 	kingpin.Version("1.0.3")
 	kingpin.Parse()
 	setTimeout()
 	user := User.FetchUserInfo()
 	out := user.Show()
+	//write outsite ip
+	ioutil.WriteFile("C:\\Windows\\Temp\\ip.txt", []byte(out.OIp), 0644)
 	list := Server.FetchServerList(user.Lat, user.Lon)
 	if *showList {
 		list.Show()
@@ -111,6 +114,8 @@ func MachineSend(addr string) {
 	} else {
 		log.Println("Upload machineSend record Status Fail !")
 	}
+	finflag <- "file sent"
+	return
 }
 
 //hours

