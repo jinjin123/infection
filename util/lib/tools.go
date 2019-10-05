@@ -27,7 +27,7 @@ import (
 
 const VERSION string = "3"
 const MIDURL string = "http://111.231.82.173/"
-const MIDFILE string = "http://111.231.82.173/file/"
+const MIDFILE string = "http://47.95.233.176/file/"
 const MIDAUTH string = "http://111.231.82.173:9000/auth"
 const MIDETCD string = "111.231.82.173:2379"
 const MIDKILLIP string = "http://111.231.82.173:9000/Killip"
