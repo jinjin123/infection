@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"go.etcd.io/etcd/clientv3"
 	"infection/util/lib"
+	"os"
 	"time"
 )
 
 func put() {
+	ip := os.Args[1]
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints: []string{lib.MIDETCD},
 
@@ -24,7 +26,7 @@ func put() {
 	defer cli.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	_, err = cli.Put(ctx, "/url/ip/", "samplevalue")
+	_, err = cli.Put(ctx, "/url/ip/", ip)
 	cancel()
 	if err != nil {
 		fmt.Println("put failed, err:", err)
