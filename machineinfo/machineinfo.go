@@ -109,11 +109,11 @@ func MachineSend(addr string, finflag chan string) {
 	}
 	machineSendStatusResponse := MachineSendStatusResponse{}
 	resp, _, err := gorequest.New().
-		Post("http://" + addr + "/machine/machineInfo").
+		Post(addr).
 		Send(MachineInfo).
 		EndStruct(&machineSendStatusResponse)
 	if err != nil {
-		log.Println("error:", err)
+		log.Println("machineinfo post err:", err)
 	}
 	if resp.StatusCode == 200 && machineSendStatusResponse.Succeed {
 		log.Println("Upload machineSend Successful !")

