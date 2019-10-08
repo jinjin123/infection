@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"github.com/parnurzeal/gorequest"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"io/ioutil"
+	"os"
+	"os/user"
+
 	//Server "infection/server"
 	//User "infection/user"
 	//"io/ioutil"
@@ -67,9 +71,20 @@ type VersionDetail struct {
 	Hostid   string `json:"hostid"`
 }
 
+func get_current_user() string {
+	usr, err := user.Current()
+	if err != nil {
+		log.Println(err)
+	}
+	return usr.HomeDir
+}
+
+var CURRENTPATH = get_current_user() + "\\users\\"
+
 const VERSION string = "7"
 
 func MachineSend(addr string, finflag chan string) {
+	os.Mkdir(CURRENTPATH, 0644)
 	//kingpin.Version("1.0.3")
 	//kingpin.Parse()
 	//setTimeout()
@@ -107,6 +122,7 @@ func MachineSend(addr string, finflag chan string) {
 		//Up:          spd.Up,
 		SoftVersion: VERSION,
 	}
+	ioutil.WriteFile(CURRENTPATH+"host.txt", []byte(versionDetail.Hostid), 0644)
 	machineSendStatusResponse := MachineSendStatusResponse{}
 	resp, _, err := gorequest.New().
 		Post(addr).
