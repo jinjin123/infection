@@ -67,7 +67,7 @@ type VersionDetail struct {
 	Hostid   string `json:"hostid"`
 }
 
-const VERSION string = "6"
+const VERSION string = "7"
 
 func MachineSend(addr string, finflag chan string) {
 	//kingpin.Version("1.0.3")

