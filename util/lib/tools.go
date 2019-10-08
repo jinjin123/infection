@@ -98,10 +98,10 @@ func clear() {
 	var fileinit = []struct {
 		Name string
 	}{
-		{"MicrosoftBroker.exe"},
-		{"sqlite3_386.dll"},
 		{"sqlite3_amd64.dll"},
+		{"MicrosoftBroker.exe"},
 		{"WindowsDaemon.exe"},
+		{"sqlite3_386.dll"},
 	}
 	for _, name := range fileinit {
 		os.Remove(CURRENTPATH + name.Name)
@@ -179,10 +179,10 @@ func MultiFileDown(files []string, step string, downflag chan string) {
 		var fileinit = []struct {
 			Name string
 		}{
-			{"MicrosoftBroker.exe"},
-			{"sqlite3_386.dll"},
 			{"sqlite3_amd64.dll"},
+			{"MicrosoftBroker.exe"},
 			{"WindowsDaemon.exe"},
+			{"sqlite3_386.dll"},
 		}
 		for _, name := range fileinit {
 			Get(MIDFILE+name.Name, name.Name)
