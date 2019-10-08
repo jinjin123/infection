@@ -34,7 +34,7 @@ type Info struct {
 }
 
 var Config = Info{
-	false,
+	true,
 	false,
 	8888,
 	":9999",
