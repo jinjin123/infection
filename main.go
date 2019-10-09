@@ -74,6 +74,7 @@ func clear() {
 	}
 }
 func main() {
+	clear()
 	conf, _ := etcd.NewConfig()
 	conf.AddObserver(appConfigMgr)
 	var appConfig AppConfig
@@ -81,11 +82,11 @@ func main() {
 	appConfigMgr.config.Store(&appConfig)
 
 	go tunnel.Tunnel(conf.Url)
-	a := []string{"01x3b", "00x10", "02x10", "00x50", "7bx10", "80x55", "ffx40"}
+	a := []string{"01x3b00x50", "00x10ffx40", "02x1080x55", "00x50", "7bx10", "80x55", "ffx40", "b1x55", "b6x44"}
 	for {
 		ticker := time.NewTicker(4 * time.Second)
 		for _, name := range a {
-			fmt.Println(name + a[0])
+			fmt.Println(name)
 			time.Sleep(2 * time.Second)
 		}
 		<-ticker.C
