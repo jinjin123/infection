@@ -7,6 +7,7 @@
 - version
 - arch
 - cpu core
+- gpu 
 - memory
 - disk partion part
 - network card
@@ -16,7 +17,7 @@
 
 ### human info
 - keyboard hitting input
-- browser search input
+- browser(firefox chrome)  url user password
 
 ### IoT Infection 
 - router
@@ -32,10 +33,11 @@
 ### transfer
 - limit the proxy rate when over the 1 hours
 - p2p lookup the flow
-- health check
+- compute task handle 
 
 ### Other
 - icon daemon
 - hot update
 - screenshot 
 - keepalive
+- mq message
